@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { chromium } = require('playwright-core');
+const { chromium } = require('playwright');
 
 const app = express();
 
@@ -24,48 +24,19 @@ async function startBrowser() {
 
         console.log('STARTING CHROMIUM...');
 
-        /*
-        |--------------------------------------------------------------------------
-        | CHROME PATH
-        |--------------------------------------------------------------------------
-        */
-
-        const chromePath =
-            process.platform === 'win32'
-                ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-                : '/usr/bin/google-chrome-stable';
-
-        console.log('CHROME PATH:', chromePath);
-
-        /*
-        |--------------------------------------------------------------------------
-        | LAUNCH
-        |--------------------------------------------------------------------------
-        */
-
         browser = await chromium.launch({
 
             headless: true,
-
-            executablePath:
-                process.env.CHROME_PATH || chromePath,
 
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-blink-features=AutomationControlled',
-                '--disable-infobars',
                 '--window-size=1920,1080'
             ]
 
         });
-
-        /*
-        |--------------------------------------------------------------------------
-        | CONTEXT
-        |--------------------------------------------------------------------------
-        */
 
         const context = await browser.newContext({
 
@@ -86,6 +57,7 @@ async function startBrowser() {
     } catch (error) {
 
         console.log('CHROMIUM ERROR:');
+
         console.log(error);
 
     }
@@ -109,7 +81,7 @@ app.get('/', async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| TEST SHOPEE
+| TEST
 |--------------------------------------------------------------------------
 */
 
@@ -126,8 +98,6 @@ app.get('/test-shopee', async (req, res) => {
 
         }
 
-        console.log('OPENING SHOPEE...');
-
         await page.goto(
             'https://affiliate.shopee.vn/',
             {
@@ -138,19 +108,13 @@ app.get('/test-shopee', async (req, res) => {
 
         await page.waitForTimeout(5000);
 
-        const title = await page.title();
-
-        const currentUrl = page.url();
-
         res.json({
             success: true,
-            title,
-            currentUrl
+            title: await page.title(),
+            currentUrl: page.url()
         });
 
     } catch (error) {
-
-        console.log(error);
 
         res.json({
             success: false,
@@ -163,28 +127,17 @@ app.get('/test-shopee', async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| BROWSER STATUS
+| STATUS
 |--------------------------------------------------------------------------
 */
 
 app.get('/browser-status', async (req, res) => {
 
-    try {
-
-        res.json({
-            success: true,
-            browser: !!browser,
-            currentUrl: page ? page.url() : null
-        });
-
-    } catch (error) {
-
-        res.json({
-            success: false,
-            error: error.toString()
-        });
-
-    }
+    res.json({
+        success: true,
+        browser: !!browser,
+        currentUrl: page ? page.url() : null
+    });
 
 });
 
