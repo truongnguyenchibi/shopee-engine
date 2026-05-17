@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { chromium } = require('playwright-core');
+const { chromium } = require('playwright');
 
 const app = express();
 
@@ -24,15 +24,7 @@ async function startBrowser() {
 
         console.log('STARTING CHROMIUM...');
 
-        const executablePath = process.env.RENDER
-            ? '/usr/bin/chromium-browser'
-            : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-
-        console.log('CHROME PATH:', executablePath);
-
         browser = await chromium.launch({
-
-            executablePath,
 
             headless: true,
 
@@ -60,19 +52,12 @@ async function startBrowser() {
 
         page = await context.newPage();
 
-        await page.addInitScript(() => {
-
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => false
-            });
-
-        });
-
         console.log('CHROMIUM STARTED');
 
     } catch (error) {
 
         console.log('CHROMIUM ERROR:');
+
         console.log(error);
 
     }
@@ -96,7 +81,7 @@ app.get('/', async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| TEST
+| TEST SHOPEE
 |--------------------------------------------------------------------------
 */
 
