@@ -12,27 +12,40 @@ let page;
 
 async function startBrowser() {
 
-    console.log("STARTING CHROMIUM...");
+    try {
 
-    browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox"
-        ]
-    });
+        console.log("STARTING CHROMIUM...");
 
-    page = await browser.newPage();
+        browser = await puppeteer.launch({
+            headless: true,
+            executablePath: '/usr/bin/chromium',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ]
+        });
 
-    await page.goto("https://affiliate.shopee.vn/", {
-        waitUntil: "networkidle2"
-    });
+        page = await browser.newPage();
 
-    console.log("CHROMIUM READY");
+        await page.goto("https://affiliate.shopee.vn/", {
+            waitUntil: "networkidle2"
+        });
+
+        console.log("CHROMIUM READY");
+
+    } catch (err) {
+
+        console.log("CHROMIUM ERROR:");
+        console.log(err);
+
+    }
+
 }
 
 app.get("/", (req, res) => {
+
     res.send("SERVER RUNNING");
+
 });
 
 app.get("/browser-status", (req, res) => {
@@ -51,17 +64,21 @@ app.post("/convert", async (req, res) => {
         const { url } = req.body;
 
         if (!url) {
+
             return res.status(400).json({
                 success: false,
                 message: "Missing URL"
             });
+
         }
 
         if (!page) {
+
             return res.status(500).json({
                 success: false,
                 message: "Browser not ready"
             });
+
         }
 
         console.log("NEW REQUEST:", url);
