@@ -1,183 +1,203 @@
-const express = require("express");
-const cors = require("cors");
-const { chromium } = require("playwright");
+const express = require('express');
+const cors = require('cors');
+const { chromium } = require('playwright-core');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-    res.send("SERVER RUNNING");
-});
+const PORT = process.env.PORT || 10000;
 
-app.get("/browser-status", (req, res) => {
-    res.json({
-        success: true
-    });
-});
+let browser = null;
+let page = null;
 
-app.get("/test-shopee", async (req, res) => {
+/*
+|--------------------------------------------------------------------------
+| START BROWSER
+|--------------------------------------------------------------------------
+*/
 
-    let browser;
+async function startBrowser() {
 
     try {
 
-        console.log("OPENING PLAYWRIGHT...");
+        console.log('STARTING CHROMIUM...');
+
+        /*
+        |--------------------------------------------------------------------------
+        | CHROME PATH
+        |--------------------------------------------------------------------------
+        */
+
+        const chromePath =
+            process.platform === 'win32'
+                ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+                : '/usr/bin/google-chrome-stable';
+
+        console.log('CHROME PATH:', chromePath);
+
+        /*
+        |--------------------------------------------------------------------------
+        | LAUNCH
+        |--------------------------------------------------------------------------
+        */
 
         browser = await chromium.launch({
+
             headless: true,
+
+            executablePath:
+                process.env.CHROME_PATH || chromePath,
+
             args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-blink-features=AutomationControlled",
-                "--disable-dev-shm-usage",
-                "--disable-gpu"
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-infobars',
+                '--window-size=1920,1080'
             ]
+
         });
+
+        /*
+        |--------------------------------------------------------------------------
+        | CONTEXT
+        |--------------------------------------------------------------------------
+        */
 
         const context = await browser.newContext({
 
-            userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-
             viewport: {
-                width: 1366,
-                height: 768
+                width: 1920,
+                height: 1080
             },
 
-            locale: "vi-VN",
+            userAgent:
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
 
-            timezoneId: "Asia/Ho_Chi_Minh"
         });
 
-        const page = await context.newPage();
+        page = await context.newPage();
+
+        console.log('CHROMIUM STARTED');
+
+    } catch (error) {
+
+        console.log('CHROMIUM ERROR:');
+        console.log(error);
+
+    }
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| HOME
+|--------------------------------------------------------------------------
+*/
+
+app.get('/', async (req, res) => {
+
+    res.json({
+        success: true,
+        message: 'Shopee Engine Running'
+    });
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| TEST SHOPEE
+|--------------------------------------------------------------------------
+*/
+
+app.get('/test-shopee', async (req, res) => {
+
+    try {
+
+        if (!page) {
+
+            return res.json({
+                success: false,
+                error: 'Browser not started'
+            });
+
+        }
+
+        console.log('OPENING SHOPEE...');
 
         await page.goto(
-            "https://affiliate.shopee.vn/",
+            'https://affiliate.shopee.vn/',
             {
-                waitUntil: "domcontentloaded",
+                waitUntil: 'domcontentloaded',
                 timeout: 60000
             }
         );
+
+        await page.waitForTimeout(5000);
 
         const title = await page.title();
 
         const currentUrl = page.url();
 
-        console.log("TITLE:", title);
-        console.log("URL:", currentUrl);
-
-        await browser.close();
-
-        return res.json({
+        res.json({
             success: true,
             title,
             currentUrl
         });
 
-    } catch (e) {
+    } catch (error) {
 
-        console.log("TEST ERROR:");
-        console.log(e);
+        console.log(error);
 
-        if (browser) {
-            await browser.close();
-        }
-
-        return res.json({
+        res.json({
             success: false,
-            error: e.toString()
+            error: error.toString()
         });
 
     }
 
 });
 
-app.post("/convert", async (req, res) => {
+/*
+|--------------------------------------------------------------------------
+| BROWSER STATUS
+|--------------------------------------------------------------------------
+*/
 
-    let browser;
+app.get('/browser-status', async (req, res) => {
 
     try {
 
-        const { url } = req.body;
-
-        if (!url) {
-            return res.json({
-                success: false,
-                error: "missing_url"
-            });
-        }
-
-        console.log("OPENING BROWSER...");
-
-        browser = await chromium.launch({
-            headless: true,
-            args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-blink-features=AutomationControlled",
-                "--disable-dev-shm-usage",
-                "--disable-gpu"
-            ]
-        });
-
-        const context = await browser.newContext({
-
-            userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-
-            viewport: {
-                width: 1366,
-                height: 768
-            },
-
-            locale: "vi-VN",
-
-            timezoneId: "Asia/Ho_Chi_Minh"
-        });
-
-        const page = await context.newPage();
-
-        await page.goto(
-            "https://affiliate.shopee.vn/",
-            {
-                waitUntil: "domcontentloaded",
-                timeout: 60000
-            }
-        );
-
-        const currentUrl = page.url();
-
-        console.log("CURRENT URL:", currentUrl);
-
-        await browser.close();
-
-        return res.json({
+        res.json({
             success: true,
-            currentUrl
+            browser: !!browser,
+            currentUrl: page ? page.url() : null
         });
 
-    } catch (e) {
+    } catch (error) {
 
-        console.log("CONVERT ERROR:");
-        console.log(e);
-
-        if (browser) {
-            await browser.close();
-        }
-
-        return res.json({
+        res.json({
             success: false,
-            error: e.toString()
+            error: error.toString()
         });
 
     }
 
 });
 
-const PORT = process.env.PORT || 3000;
+/*
+|--------------------------------------------------------------------------
+| START SERVER
+|--------------------------------------------------------------------------
+*/
 
-app.listen(PORT, () => {
-    console.log("SERVER RUNNING ON PORT", PORT);
+app.listen(PORT, async () => {
+
+    console.log(`SERVER RUNNING ON PORT ${PORT}`);
+
+    await startBrowser();
+
 });
